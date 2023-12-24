@@ -1,0 +1,95 @@
+﻿CREATE PROCEDURE [dbo].[GameProviderDB_UpdateBetDetailInfoBySettlement_1.0.0]
+	@ProviderId [int] ,
+	@TransferCode [nvarchar](100),
+    @Winlost [decimal](19, 6) ,
+    @GameResult [nvarchar](4000) = '',
+	@ModifiedOn [datetime] ,
+	@ModifiedBy [nvarchar](50),
+    @Status [int],
+	@IsResettle [bit],
+	@WebId [int],
+	@CustomerId [int],
+	@IsIgnoreBetStatus [bit] = 0
+AS
+BEGIN
+	SET NOCOUNT ON;
+	DECLARE @sql_updateBetDetail [nvarchar](max) ='
+	UPDATE Provider'+ cast(@ProviderId as nvarchar(5)) +'BetDetail 
+	
+	SET [Winlost] = @Winlost,
+		[GameResult] = @GameResult,
+		[ModifiedOn] = @ModifiedOn,
+		[ModifiedBy] = @ModifiedBy,
+		[Status] = @Status
+
+	WHERE [TransferCode] = @TransferCode
+	AND [WebId] = @WebId
+	AND [CustomerId] = @CustomerId
+	AND [Status] = 4' --[Status] = 4 means it's still in running
+
+	IF @IsResettle = 1
+	BEGIN
+		SET @sql_updateBetDetail ='
+		UPDATE Provider'+ cast(@ProviderId as nvarchar(5)) +'BetDetail 
+	
+		SET [Winlost] = @Winlost,
+			[GameResult] = @GameResult,
+			[ModifiedOn] = @ModifiedOn,
+			[ModifiedBy] = @ModifiedBy,
+			[Status] = @Status,
+			[IsResettle] = 1
+
+		WHERE [TransferCode] = @TransferCode
+		AND [WebId] = @WebId
+		AND [CustomerId] = @CustomerId
+		AND [Status] IN (0,1,2)' --(0,1,2) means it's settled
+	END
+
+	IF @IsIgnoreBetStatus = 1
+	BEGIN
+		SET @sql_updateBetDetail ='
+		UPDATE Provider'+ cast(@ProviderId as nvarchar(5)) +'BetDetail 
+	
+		SET [Winlost] = @Winlost,
+			[GameResult] = @GameResult,
+			[ModifiedOn] = @ModifiedOn,
+			[ModifiedBy] = @ModifiedBy,
+			[Status] = @Status
+
+		WHERE [TransferCode] = @TransferCode
+		AND [WebId] = @WebId
+		AND [CustomerId] = @CustomerId'
+	END
+
+	EXECUTE sp_executesql @sql_updateBetDetail, 
+	N'@TransferCode [nvarchar](100),
+	@ProviderId [int] ,
+    @Winlost [decimal](19, 6) ,
+    @GameResult [nvarchar](4000) ,
+	@ModifiedOn [datetime] ,
+	@ModifiedBy [nvarchar](50) ,
+	@Status [int],
+	@WebId [int],
+	@CustomerId [int]
+	',
+	@TransferCode,
+	@ProviderId,
+	@Winlost,
+	@GameResult,
+	@ModifiedOn,
+	@ModifiedBy,
+	@Status,
+	@WebId,
+	@CustomerId
+
+	IF(@@error != 0
+           OR @@rowcount = 0)
+            BEGIN
+                SELECT 7 AS 'ErrorCode', 
+                       'Fail to update ' +'Provider'+ cast(@ProviderId as nvarchar(5)) +'BetDetail'+' table' AS 'ErrorMessage';
+                RETURN;
+        END;
+        SELECT 0 AS 'ErrorCode', 
+               'No Error' AS 'ErrorMessage';
+END;
+GO
