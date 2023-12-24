@@ -1,4 +1,9 @@
 using CountryLibE2e.Api.Controllers;
+using CountryLibE2e.Api.Repositories;
+using CountryLibE2e.Api.Repositories.Interfaces;
+using CountryLibE2e.Api.Services;
+using CountryLibE2e.Api.Services.Interfaces;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddHttpClient<ICountryLibService, CountryLibService>().SetHandlerLifetime(TimeSpan.FromSeconds(5));
 builder.Services.AddScoped<ICountryLibService, CountryLibService>();
+builder.Services.TryAddSingleton<ICountryLibRepository, CountryLibRepository>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
